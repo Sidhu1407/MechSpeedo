@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes.js";
 import vehicleRoutes from "./routes/vehicleRoutes.js";
 import assistanceRoutes from "./routes/assistanceRoutes.js";
 import providerRoutes from "./routes/providerRoutes.js";
+import routeAnalysisRoutes from "./routes/routeAnalysisRoutes.js";
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/assistance", assistanceRoutes);
 app.use("/api/providers", providerRoutes);
+app.use("/api/route-analysis", routeAnalysisRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({
