@@ -408,3 +408,192 @@ export const getMyProviderProfile = async (req, res) => {
     });
   }
 };
+export const updateAssistanceCost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estimatedCost } = req.body;
+
+    if (
+      estimatedCost === undefined ||
+      estimatedCost === null ||
+      Number.isNaN(Number(estimatedCost)) ||
+      Number(estimatedCost) < 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "estimatedCost must be a valid non-negative number"
+      });
+    }
+
+    const provider = await prisma.serviceProvider.findUnique({
+      where: {
+        userId: req.user.userId
+      }
+    });
+
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        message: "Service provider profile not found"
+      });
+    }
+
+    const assistanceRequest =
+      await prisma.assistanceRequest.findUnique({
+        where: {
+          id
+        }
+      });
+
+    if (!assistanceRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Assistance request not found"
+      });
+    }
+
+    if (assistanceRequest.providerId !== provider.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not assigned to this assistance request"
+      });
+    }
+
+    if (
+      assistanceRequest.status === "COMPLETED" ||
+      assistanceRequest.status === "CANCELLED"
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot update cost for a request with status ${assistanceRequest.status}`
+      });
+    }
+
+    const updatedRequest =
+      await prisma.assistanceRequest.update({
+        where: {
+          id
+        },
+        data: {
+          estimatedCost: Number(estimatedCost)
+        },
+        include: {
+          vehicle: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true
+            }
+          },
+          provider: true
+        }
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Assistance cost updated successfully",
+      assistanceRequest: updatedRequest
+    });
+  } catch (error) {
+    console.error("Update assistance cost error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while updating the assistance cost"
+    });
+  }
+};
+export const updateFinalCost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { finalCost } = req.body;
+
+    if (
+      finalCost === undefined ||
+      finalCost === null ||
+      Number.isNaN(Number(finalCost)) ||
+      Number(finalCost) < 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "finalCost must be a valid non-negative number"
+      });
+    }
+
+    const provider = await prisma.serviceProvider.findUnique({
+      where: {
+        userId: req.user.userId
+      }
+    });
+
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        message: "Service provider profile not found"
+      });
+    }
+
+    const assistanceRequest =
+      await prisma.assistanceRequest.findUnique({
+        where: {
+          id
+        }
+      });
+
+    if (!assistanceRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Assistance request not found"
+      });
+    }
+
+    if (assistanceRequest.providerId !== provider.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not assigned to this assistance request"
+      });
+    }
+
+    if (assistanceRequest.status !== "COMPLETED") {
+      return res.status(409).json({
+        success: false,
+        message: "Final cost can only be recorded for completed requests"
+      });
+    }
+
+    const updatedRequest =
+      await prisma.assistanceRequest.update({
+        where: {
+          id
+        },
+        data: {
+          finalCost: Number(finalCost)
+        },
+        include: {
+          vehicle: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true
+            }
+          },
+          provider: true
+        }
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Final assistance cost recorded successfully",
+      assistanceRequest: updatedRequest
+    });
+  } catch (error) {
+    console.error("Update final cost error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while recording the final assistance cost"
+    });
+  }
+};
