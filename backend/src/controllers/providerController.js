@@ -320,3 +320,52 @@ export const updateAssistanceStatus = async (req, res) => {
     });
   }
 };
+export const updateProviderAvailability = async (req, res) => {
+  try {
+    const { isAvailable } = req.body;
+
+    if (typeof isAvailable !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "isAvailable must be a boolean"
+      });
+    }
+
+    const provider = await prisma.serviceProvider.findUnique({
+      where: {
+        userId: req.user.userId
+      }
+    });
+
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        message: "Service provider profile not found"
+      });
+    }
+
+    const updatedProvider = await prisma.serviceProvider.update({
+      where: {
+        id: provider.id
+      },
+      data: {
+        isAvailable
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Provider is now ${
+        isAvailable ? "available" : "unavailable"
+      }`,
+      serviceProvider: updatedProvider
+    });
+  } catch (error) {
+    console.error("Update provider availability error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while updating provider availability"
+    });
+  }
+};
