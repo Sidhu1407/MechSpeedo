@@ -105,3 +105,56 @@ export const getMyAssistanceRequests = async (req, res) => {
     });
   }
 };
+export const cancelAssistanceRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const assistanceRequest =
+      await prisma.assistanceRequest.findFirst({
+        where: {
+          id,
+          userId: req.user.userId
+        }
+      });
+
+    if (!assistanceRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Assistance request not found"
+      });
+    }
+
+    if (
+      assistanceRequest.status === "COMPLETED" ||
+      assistanceRequest.status === "CANCELLED"
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot cancel a request with status ${assistanceRequest.status}`
+      });
+    }
+
+    const updatedRequest =
+      await prisma.assistanceRequest.update({
+        where: {
+          id
+        },
+        data: {
+          status: "CANCELLED"
+        }
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Assistance request cancelled successfully",
+      assistanceRequest: updatedRequest
+    });
+  } catch (error) {
+    console.error("Cancel assistance request error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while cancelling the assistance request"
+    });
+  }
+};

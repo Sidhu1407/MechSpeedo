@@ -222,3 +222,101 @@ export const acceptAssistanceRequest = async (req, res) => {
     });
   }
 };
+export const updateAssistanceStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ["IN_PROGRESS", "COMPLETED", "CANCELLED"];
+
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid assistance status"
+      });
+    }
+
+    const provider = await prisma.serviceProvider.findUnique({
+      where: {
+        userId: req.user.userId
+      }
+    });
+
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        message: "Service provider profile not found"
+      });
+    }
+
+    const assistanceRequest =
+      await prisma.assistanceRequest.findUnique({
+        where: {
+          id
+        }
+      });
+
+    if (!assistanceRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Assistance request not found"
+      });
+    }
+
+    if (assistanceRequest.providerId !== provider.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not assigned to this assistance request"
+      });
+    }
+
+    const validTransitions = {
+      ACCEPTED: ["IN_PROGRESS", "CANCELLED"],
+      IN_PROGRESS: ["COMPLETED", "CANCELLED"]
+    };
+
+    const allowedNextStatuses =
+      validTransitions[assistanceRequest.status];
+
+    if (!allowedNextStatuses?.includes(status)) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot change status from ${assistanceRequest.status} to ${status}`
+      });
+    }
+
+    const updatedRequest =
+      await prisma.assistanceRequest.update({
+        where: {
+          id
+        },
+        data: {
+          status
+        },
+        include: {
+          vehicle: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true
+            }
+          },
+          provider: true
+        }
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Assistance request status updated successfully",
+      assistanceRequest: updatedRequest
+    });
+  } catch (error) {
+    console.error("Update assistance status error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while updating the assistance status"
+    });
+  }
+};
