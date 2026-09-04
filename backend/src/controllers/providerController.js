@@ -369,3 +369,42 @@ export const updateProviderAvailability = async (req, res) => {
     });
   }
 };
+export const getMyProviderProfile = async (req, res) => {
+  try {
+    const serviceProvider = await prisma.serviceProvider.findUnique({
+      where: {
+        userId: req.user.userId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true
+          }
+        }
+      }
+    });
+
+    if (!serviceProvider) {
+      return res.status(404).json({
+        success: false,
+        message: "Service provider profile not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      serviceProvider
+    });
+  } catch (error) {
+    console.error("Get provider profile error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching provider profile"
+    });
+  }
+};
